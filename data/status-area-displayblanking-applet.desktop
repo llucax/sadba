@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Display Blanking
+Comment=Display blanking mode changing applet
+Category=permanent
+Type=default
+X-Path=lib-displayblanking-status-menu.so

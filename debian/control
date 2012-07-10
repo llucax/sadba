@@ -1,0 +1,13 @@
+Source: status-area-displayblanking-applet
+Section: user/desktop
+Priority: optional
+Maintainer: Leandro Lucarella <luca@llucax.com.ar>
+Build-Depends: debhelper (>= 5), libgtk2.0-dev, libglib2.0-dev, libhildon1-dev, libhildondesktop1-dev, gettext
+
+Package: status-area-displayblanking-applet
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, hildon-desktop (>= 1:2.2.142-11)
+XSBC-Maemo-Display-Name: Display Blanking Applet
+Description: Hildon Status Menu plugin to control the display blanking mode.
+ This status menu applet let you easily change the display blanking mode right
+ from the status menu, without having to go through the settings.
