@@ -70,16 +70,16 @@ GType display_blanking_status_plugin_get_type (void);
                 TYPE_DISPLAY_BLANKING_STATUS_PLUGIN, \
                 DisplayBlankingStatusPluginPrivate))
 
-#define GCONF_KEY_DISPLAY_BLANKING "/system/osso/dsm/display/inhibit_blank_mode"
+#define MODE_GCONF_KEY "/system/osso/dsm/display/inhibit_blank_mode"
 
 // Shoud contain one, and only one "%d"
-#define DISPLAY_BLANKING_ICON_TEMPLATE "display-blanking-icon.%d"
+#define ICON_TEMPLATE "display-blanking-icon.%d"
 
 #define GETTEXT_DOM "status-area-displayblanking-applet"
 #define gettext_noop(str) (str)
 
-#define DISPLAY_BLANKING_MODES 5
-static const char *_DisplayBlankingDescription[DISPLAY_BLANKING_MODES] =
+#define BLANKING_MODES 5
+static const char *_DisplayBlankingDescription[BLANKING_MODES] =
 {
     gettext_noop ("Both enabled"),
     gettext_noop ("Both only on battery"),
@@ -111,28 +111,24 @@ display_blanking_status_plugin_class_init (DisplayBlankingStatusPluginClass *c)
 }
 
 static void
-display_blanking_status_plugin_mode_set (DisplayBlankingStatusPluginPrivate *priv,
-        gboolean update)
+set_mode (DisplayBlankingStatusPluginPrivate *priv, gboolean update)
 {
-    // Should be enough if DISPLAY_BLANKING_MODES stays in 1 digit, "%d"
+    // Should be enough if BLANKING_MODES stays in 1 digit, "%d"
     // provides space for that digit and '\0'
-    static char icon_name[sizeof (DISPLAY_BLANKING_ICON_TEMPLATE)];
+    static char icon_name[sizeof (ICON_TEMPLATE)];
 
     // Get the mode to set
-    gint mode = gconf_client_get_int (priv->gconf_client,
-            GCONF_KEY_DISPLAY_BLANKING, NULL);
+    gint mode = gconf_client_get_int (priv->gconf_client, MODE_GCONF_KEY, NULL);
     if (update)
-        mode = (mode + 1) % DISPLAY_BLANKING_MODES;
+        mode = (mode + 1) % BLANKING_MODES;
 
     // Toggle display blanking
-    gconf_client_set_int (priv->gconf_client, GCONF_KEY_DISPLAY_BLANKING,
-            mode, NULL);
+    gconf_client_set_int (priv->gconf_client, MODE_GCONF_KEY, mode, NULL);
 
     // Update button text and status bar icon
     hildon_button_set_value (HILDON_BUTTON (priv->button),
             dgettext (GETTEXT_DOM, _DisplayBlankingDescription[mode]));
-    int r = snprintf (icon_name, sizeof (icon_name),
-            DISPLAY_BLANKING_ICON_TEMPLATE, mode);
+    int r = snprintf (icon_name, sizeof (icon_name), ICON_TEMPLATE, mode);
     g_assert(r < sizeof (icon_name)); // otherwise it was truncated
     GtkWidget *icon = gtk_image_new_from_icon_name (icon_name,
             GTK_ICON_SIZE_DIALOG);
@@ -148,38 +144,37 @@ display_blanking_status_plugin_mode_set (DisplayBlankingStatusPluginPrivate *pri
 }
 
 static void
-display_blanking_status_plugin_on_button_clicked (GtkWidget *button,
-        DisplayBlankingStatusPlugin *plugin)
+on_button_clicked (GtkWidget *button, DisplayBlankingStatusPlugin *plugin)
 {
-    display_blanking_status_plugin_mode_set (
-            DISPLAY_BLANKING_STATUS_PLUGIN_GET_PRIVATE (plugin), TRUE);
+    set_mode (DISPLAY_BLANKING_STATUS_PLUGIN_GET_PRIVATE (plugin), TRUE);
 }
 
 static void
 display_blanking_status_plugin_init (DisplayBlankingStatusPlugin *plugin)
 {
-    plugin->priv = DISPLAY_BLANKING_STATUS_PLUGIN_GET_PRIVATE (plugin);
+    DisplayBlankingStatusPluginPrivate* priv;
+    priv = DISPLAY_BLANKING_STATUS_PLUGIN_GET_PRIVATE (plugin);
+    plugin->priv = priv;
 
-    plugin->priv->gconf_client = gconf_client_get_default();
-    g_assert(GCONF_IS_CLIENT(plugin->priv->gconf_client));
+    priv->gconf_client = gconf_client_get_default();
+    g_assert(GCONF_IS_CLIENT(priv->gconf_client));
 
-    plugin->priv->button = hildon_button_new (HILDON_SIZE_FINGER_HEIGHT |
+    priv->button = hildon_button_new (HILDON_SIZE_FINGER_HEIGHT |
                 HILDON_SIZE_AUTO_WIDTH, HILDON_BUTTON_ARRANGEMENT_VERTICAL);
-    gtk_button_set_alignment (GTK_BUTTON (plugin->priv->button), 0, 0);
-    hildon_button_set_style (HILDON_BUTTON (plugin->priv->button),
+    gtk_button_set_alignment (GTK_BUTTON (priv->button), 0, 0);
+    hildon_button_set_style (HILDON_BUTTON (priv->button),
             HILDON_BUTTON_STYLE_PICKER);
-    hildon_button_set_title (HILDON_BUTTON (plugin->priv->button),
+    hildon_button_set_title (HILDON_BUTTON (priv->button),
             dgettext (GETTEXT_DOM, "Display blanking mode"));
 
-    display_blanking_status_plugin_mode_set (plugin->priv, FALSE);
+    set_mode (priv, FALSE);
 
-    g_signal_connect (plugin->priv->button, "clicked",
-            G_CALLBACK (display_blanking_status_plugin_on_button_clicked),
+    g_signal_connect (priv->button, "clicked", G_CALLBACK (on_button_clicked),
             plugin);
 
-    gtk_container_add (GTK_CONTAINER (plugin), plugin->priv->button);
+    gtk_container_add (GTK_CONTAINER (plugin), priv->button);
 
-    gtk_widget_show_all (plugin->priv->button);
+    gtk_widget_show_all (priv->button);
 
     gtk_widget_show (GTK_WIDGET (plugin));
 }
