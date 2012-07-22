@@ -70,7 +70,8 @@ GType display_blanking_status_plugin_get_type (void);
                 TYPE_DISPLAY_BLANKING_STATUS_PLUGIN, \
                 DisplayBlankingStatusPluginPrivate))
 
-#define MODE_GCONF_KEY "/system/osso/dsm/display/inhibit_blank_mode"
+#define MODE_GCONF_ROOT "/system/osso/dsm/display"
+#define MODE_GCONF_KEY  MODE_GCONF_ROOT "/inhibit_blank_mode"
 
 // Shoud contain one, and only one "%d"
 #define ICON_TEMPLATE "display-blanking-icon.%d"
@@ -93,6 +94,7 @@ struct _DisplayBlankingStatusPluginPrivate
     GtkWidget *button;
     GConfClient *gconf_client;
     gpointer data;
+    gint blanking_mode;
 };
 
 HD_DEFINE_PLUGIN_MODULE (DisplayBlankingStatusPlugin,
@@ -111,21 +113,14 @@ display_blanking_status_plugin_class_init (DisplayBlankingStatusPluginClass *c)
 }
 
 static void
-set_mode (DisplayBlankingStatusPluginPrivate *priv, gboolean update)
+update_gui (DisplayBlankingStatusPluginPrivate *priv)
 {
     // Should be enough if BLANKING_MODES stays in 1 digit, "%d"
     // provides space for that digit and '\0'
     static char icon_name[sizeof (ICON_TEMPLATE)];
 
-    // Get the mode to set
-    gint mode = gconf_client_get_int (priv->gconf_client, MODE_GCONF_KEY, NULL);
-    if (update)
-        mode = (mode + 1) % BLANKING_MODES;
-
-    // Toggle display blanking
-    gconf_client_set_int (priv->gconf_client, MODE_GCONF_KEY, mode, NULL);
-
     // Update button text and status bar icon
+    gint mode = priv->blanking_mode;
     hildon_button_set_value (HILDON_BUTTON (priv->button),
             dgettext (GETTEXT_DOM, _DisplayBlankingDescription[mode]));
     int r = snprintf (icon_name, sizeof (icon_name), ICON_TEMPLATE, mode);
@@ -133,26 +128,49 @@ set_mode (DisplayBlankingStatusPluginPrivate *priv, gboolean update)
     GtkWidget *icon = gtk_image_new_from_icon_name (icon_name,
             GTK_ICON_SIZE_DIALOG);
     hildon_button_set_image (HILDON_BUTTON (priv->button), icon);
-
-    // Show a notification banner (only if updating)
-    if (update) {
-        GtkWidget *banner = hildon_banner_show_informationf (priv->button, NULL,
-                dgettext (GETTEXT_DOM, "Changed display blanking mode to: %s"),
-                _DisplayBlankingDescription[mode]);
-        hildon_banner_set_timeout (HILDON_BANNER (banner), 5000);
-    }
 }
 
 static void
-on_button_clicked (GtkWidget *button, DisplayBlankingStatusPlugin *plugin)
+on_button_clicked (GtkWidget *button, DisplayBlankingStatusPluginPrivate *priv)
 {
-    set_mode (DISPLAY_BLANKING_STATUS_PLUGIN_GET_PRIVATE (plugin), TRUE);
+    // Update display blanking mode
+    priv->blanking_mode = (priv->blanking_mode + 1) % BLANKING_MODES;
+    update_gui (priv);
+    gconf_client_set_int (priv->gconf_client, MODE_GCONF_KEY,
+            priv->blanking_mode, NULL);
+
+    // Show a notification banner (only if updating)
+    GtkWidget *banner = hildon_banner_show_informationf (priv->button, NULL,
+            dgettext (GETTEXT_DOM, "Changed display blanking mode to: %s"),
+            _DisplayBlankingDescription[priv->blanking_mode]);
+    hildon_banner_set_timeout (HILDON_BANNER (banner), 5000);
+}
+
+static void
+on_gconf_notify (GConfClient* client, guint cnxn_id, GConfEntry* entry,
+        DisplayBlankingStatusPluginPrivate* priv)
+{
+    const gchar* key = gconf_entry_get_key (entry);
+    g_assert (key != NULL);
+
+    // Ignore notification about keys we don't care about
+    if (strcmp (key, MODE_GCONF_KEY) != 0)
+        return;
+
+    const GConfValue* value = gconf_entry_get_value (entry);
+    g_assert (value != NULL);
+    g_assert (GCONF_VALUE_TYPE_VALID (value->type));
+
+    priv->blanking_mode = gconf_value_get_int (value);
+    update_gui (priv);
 }
 
 static void
 display_blanking_status_plugin_init (DisplayBlankingStatusPlugin *plugin)
 {
-    DisplayBlankingStatusPluginPrivate* priv;
+    GError* error = NULL;
+    DisplayBlankingStatusPluginPrivate *priv;
+
     priv = DISPLAY_BLANKING_STATUS_PLUGIN_GET_PRIVATE (plugin);
     plugin->priv = priv;
 
@@ -167,10 +185,21 @@ display_blanking_status_plugin_init (DisplayBlankingStatusPlugin *plugin)
     hildon_button_set_title (HILDON_BUTTON (priv->button),
             dgettext (GETTEXT_DOM, "Display blanking mode"));
 
-    set_mode (priv, FALSE);
+    priv->blanking_mode = gconf_client_get_int (priv->gconf_client,
+            MODE_GCONF_KEY, &error);
+    g_assert (error == NULL);
+
+    update_gui (priv);
 
     g_signal_connect (priv->button, "clicked", G_CALLBACK (on_button_clicked),
-            plugin);
+            priv);
+
+    gconf_client_add_dir (priv->gconf_client, MODE_GCONF_ROOT,
+            GCONF_CLIENT_PRELOAD_NONE, &error);
+    g_assert (error == NULL);
+    gconf_client_notify_add (priv->gconf_client, MODE_GCONF_KEY, &on_gconf_notify,
+            priv, NULL, &error);
+    g_assert (error == NULL);
 
     gtk_container_add (GTK_CONTAINER (plugin), priv->button);
 
