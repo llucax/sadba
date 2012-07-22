@@ -124,7 +124,7 @@ update_gui (DisplayBlankingStatusPluginPrivate *priv)
     hildon_button_set_value (HILDON_BUTTON (priv->button),
             dgettext (GETTEXT_DOM, _DisplayBlankingDescription[mode]));
     int r = snprintf (icon_name, sizeof (icon_name), ICON_TEMPLATE, mode);
-    g_assert(r < sizeof (icon_name)); // otherwise it was truncated
+    g_assert (r < sizeof (icon_name)); // otherwise it was truncated
     GtkWidget *icon = gtk_image_new_from_icon_name (icon_name,
             GTK_ICON_SIZE_DIALOG);
     hildon_button_set_image (HILDON_BUTTON (priv->button), icon);
@@ -174,8 +174,8 @@ display_blanking_status_plugin_init (DisplayBlankingStatusPlugin *plugin)
     priv = DISPLAY_BLANKING_STATUS_PLUGIN_GET_PRIVATE (plugin);
     plugin->priv = priv;
 
-    priv->gconf_client = gconf_client_get_default();
-    g_assert(GCONF_IS_CLIENT(priv->gconf_client));
+    priv->gconf_client = gconf_client_get_default ();
+    g_assert (GCONF_IS_CLIENT (priv->gconf_client));
 
     priv->button = hildon_button_new (HILDON_SIZE_FINGER_HEIGHT |
                 HILDON_SIZE_AUTO_WIDTH, HILDON_BUTTON_ARRANGEMENT_VERTICAL);
