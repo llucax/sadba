@@ -99,10 +99,10 @@ static const char *mode_icon_name[BLANKING_MODES] =
 
 struct _DisplayBlankingStatusPluginPrivate
 {
-    GtkWidget *button;
     GConfClient *gconf_client;
+    GtkWidget *mode_button;
+    GtkWidget *mode_dialog;
     gpointer data;
-    gint blanking_mode;
 };
 
 HD_DEFINE_PLUGIN_MODULE (DisplayBlankingStatusPlugin,
@@ -121,30 +121,89 @@ display_blanking_status_plugin_class_init (DisplayBlankingStatusPluginClass *c)
 }
 
 static void
-update_gui (DisplayBlankingStatusPluginPrivate *priv)
+update_mode_gui (gint mode, DisplayBlankingStatusPluginPrivate *priv)
 {
-    gint mode = priv->blanking_mode;
-    hildon_button_set_value (HILDON_BUTTON (priv->button),
+    hildon_button_set_value (HILDON_BUTTON (priv->mode_button),
             dgettext (GETTEXT_DOM, _DisplayBlankingDescription[mode]));
     GtkWidget *icon = gtk_image_new_from_icon_name (mode_icon_name[mode],
             GTK_ICON_SIZE_DIALOG);
-    hildon_button_set_image (HILDON_BUTTON (priv->button), icon);
+    hildon_button_set_image (HILDON_BUTTON (priv->mode_button), icon);
 }
 
 static void
-on_button_clicked (GtkWidget *button, DisplayBlankingStatusPluginPrivate *priv)
+on_mode_dialog_button_clicked (GtkWidget *button, GtkDialog *dialog)
 {
-    // Update display blanking mode
-    priv->blanking_mode = (priv->blanking_mode + 1) % BLANKING_MODES;
-    update_gui (priv);
-    gconf_client_set_int (priv->gconf_client, MODE_GCONF_KEY,
-            priv->blanking_mode, NULL);
+    const gchar *title = hildon_button_get_title (HILDON_BUTTON (button));
 
-    // Show a notification banner (only if updating)
-    GtkWidget *banner = hildon_banner_show_informationf (priv->button, NULL,
-            dgettext (GETTEXT_DOM, "Changed display blanking mode to: %s"),
-            _DisplayBlankingDescription[priv->blanking_mode]);
-    hildon_banner_set_timeout (HILDON_BANNER (banner), 5000);
+    gint *mode = (gint *) g_object_get_data (G_OBJECT(dialog), "mode");
+    g_assert (mode != NULL);
+
+    for (*mode = 0; *mode < BLANKING_MODES; (*mode)++) {
+        if (strcmp (title, _DisplayBlankingDescription[*mode]) == 0)
+            break;
+    }
+    g_assert (*mode < BLANKING_MODES);
+
+    gtk_dialog_response (dialog, GTK_RESPONSE_OK);
+}
+
+static void
+on_mode_button_clicked (GtkWidget *button,
+        DisplayBlankingStatusPluginPrivate *priv)
+{
+    GtkWidget *parent = gtk_widget_get_ancestor (GTK_WIDGET (priv->mode_button),
+            GTK_TYPE_WINDOW);
+    gtk_widget_hide (parent);
+
+    g_assert (priv->mode_dialog == NULL);
+    priv->mode_dialog = gtk_dialog_new ();
+    gtk_window_set_modal (GTK_WINDOW (priv->mode_dialog), TRUE);
+    gtk_window_set_title (GTK_WINDOW (priv->mode_dialog),
+            dgettext (GETTEXT_DOM, "Select display blanking mode"));
+
+    GtkWidget *pan_area = hildon_pannable_area_new ();
+    g_assert (pan_area != NULL);
+
+    GtkWidget *vbox = gtk_vbox_new (FALSE, 0);
+    g_assert (vbox != NULL);
+
+    hildon_pannable_area_add_with_viewport (HILDON_PANNABLE_AREA (pan_area),
+            vbox);
+    gtk_box_pack_start (GTK_BOX (GTK_DIALOG (priv->mode_dialog)->vbox),
+            pan_area, TRUE, TRUE, 0);
+
+    g_object_set (G_OBJECT (pan_area), "height-request",
+            MIN (350, BLANKING_MODES * 70), NULL);
+
+    gint mode = BLANKING_MODES;
+    for (int i = 0; i < BLANKING_MODES; i++) {
+        GtkWidget *button =
+                hildon_button_new_with_text (HILDON_SIZE_FINGER_HEIGHT,
+                    HILDON_BUTTON_ARRANGEMENT_VERTICAL,
+                    _DisplayBlankingDescription[i], NULL);
+        GtkWidget *icon = gtk_image_new_from_icon_name (mode_icon_name[i],
+                GTK_ICON_SIZE_DIALOG);
+        hildon_button_set_image (HILDON_BUTTON (button), icon);
+        gtk_button_set_alignment (GTK_BUTTON (button), 0.0f, 0.5f);
+        gtk_box_pack_start (GTK_BOX (vbox), button, FALSE, FALSE, 0);
+        g_signal_connect (button, "clicked",
+                G_CALLBACK (on_mode_dialog_button_clicked), priv->mode_dialog);
+    }
+
+    gtk_widget_show_all (priv->mode_dialog);
+
+    g_object_set_data (G_OBJECT (priv->mode_dialog), "mode", &mode);
+    gtk_dialog_run (GTK_DIALOG (priv->mode_dialog));
+
+    if (mode != BLANKING_MODES) {
+        // will trigger the gconf notify signal
+        GError *error = NULL;
+        gconf_client_set_int (priv->gconf_client, MODE_GCONF_KEY, mode, &error);
+        g_assert (error == NULL);
+    }
+
+    gtk_widget_destroy (priv->mode_dialog);
+    priv->mode_dialog = NULL;
 }
 
 static void
@@ -161,50 +220,65 @@ on_gconf_notify (GConfClient* client, guint cnxn_id, GConfEntry* entry,
     const GConfValue* value = gconf_entry_get_value (entry);
     g_assert (value != NULL);
     g_assert (GCONF_VALUE_TYPE_VALID (value->type));
+    g_assert (value->type == GCONF_VALUE_INT);
 
-    priv->blanking_mode = gconf_value_get_int (value);
-    update_gui (priv);
+    gint mode = gconf_value_get_int (value);
+    update_mode_gui (mode, priv);
+}
+
+static void
+init_gconf (DisplayBlankingStatusPluginPrivate *priv)
+{
+    GError* error = NULL;
+
+    priv->gconf_client = gconf_client_get_default ();
+    g_assert (GCONF_IS_CLIENT (priv->gconf_client));
+
+    gconf_client_add_dir (priv->gconf_client, MODE_GCONF_ROOT,
+            GCONF_CLIENT_PRELOAD_NONE, &error);
+    g_assert (error == NULL);
+
+    gconf_client_notify_add (priv->gconf_client, MODE_GCONF_KEY,
+            (GConfClientNotifyFunc) &on_gconf_notify, priv, NULL, &error);
+    g_assert (error == NULL);
+}
+
+static void
+init_mode_gui (DisplayBlankingStatusPluginPrivate *priv)
+{
+    priv->mode_dialog = NULL;
+    priv->mode_button = hildon_button_new (HILDON_SIZE_FINGER_HEIGHT |
+                HILDON_SIZE_AUTO_WIDTH, HILDON_BUTTON_ARRANGEMENT_VERTICAL);
+    gtk_button_set_alignment (GTK_BUTTON (priv->mode_button), 0, 0);
+    hildon_button_set_style (HILDON_BUTTON (priv->mode_button),
+            HILDON_BUTTON_STYLE_PICKER);
+    hildon_button_set_title (HILDON_BUTTON (priv->mode_button),
+            dgettext (GETTEXT_DOM, "Display blanking mode"));
+
+    GError* error = NULL;
+    gint mode = gconf_client_get_int (priv->gconf_client, MODE_GCONF_KEY,
+            &error);
+    g_assert (error == NULL);
+    update_mode_gui (mode, priv);
+
+    g_signal_connect (priv->mode_button, "clicked",
+            G_CALLBACK (on_mode_button_clicked), priv);
 }
 
 static void
 display_blanking_status_plugin_init (DisplayBlankingStatusPlugin *plugin)
 {
-    GError* error = NULL;
     DisplayBlankingStatusPluginPrivate *priv;
 
     priv = DISPLAY_BLANKING_STATUS_PLUGIN_GET_PRIVATE (plugin);
     plugin->priv = priv;
 
-    priv->gconf_client = gconf_client_get_default ();
-    g_assert (GCONF_IS_CLIENT (priv->gconf_client));
+    init_gconf (priv);
+    init_mode_gui (priv);
 
-    priv->button = hildon_button_new (HILDON_SIZE_FINGER_HEIGHT |
-                HILDON_SIZE_AUTO_WIDTH, HILDON_BUTTON_ARRANGEMENT_VERTICAL);
-    gtk_button_set_alignment (GTK_BUTTON (priv->button), 0, 0);
-    hildon_button_set_style (HILDON_BUTTON (priv->button),
-            HILDON_BUTTON_STYLE_PICKER);
-    hildon_button_set_title (HILDON_BUTTON (priv->button),
-            dgettext (GETTEXT_DOM, "Display blanking mode"));
+    gtk_container_add (GTK_CONTAINER (plugin), priv->mode_button);
 
-    priv->blanking_mode = gconf_client_get_int (priv->gconf_client,
-            MODE_GCONF_KEY, &error);
-    g_assert (error == NULL);
-
-    update_gui (priv);
-
-    g_signal_connect (priv->button, "clicked", G_CALLBACK (on_button_clicked),
-            priv);
-
-    gconf_client_add_dir (priv->gconf_client, MODE_GCONF_ROOT,
-            GCONF_CLIENT_PRELOAD_NONE, &error);
-    g_assert (error == NULL);
-    gconf_client_notify_add (priv->gconf_client, MODE_GCONF_KEY,
-            (GConfClientNotifyFunc) &on_gconf_notify, priv, NULL, &error);
-    g_assert (error == NULL);
-
-    gtk_container_add (GTK_CONTAINER (plugin), priv->button);
-
-    gtk_widget_show_all (priv->button);
+    gtk_widget_show_all (priv->mode_button);
 
     gtk_widget_show (GTK_WIDGET (plugin));
 }
