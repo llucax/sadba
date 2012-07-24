@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <libintl.h>
 #include <gtk/gtk.h>
 #include <hildon/hildon.h>
@@ -98,7 +99,7 @@ struct _DisplayBlankingStatusPluginPrivate
 };
 
 HD_DEFINE_PLUGIN_MODULE (DisplayBlankingStatusPlugin,
-        display_blanking_status_plugin, HD_TYPE_STATUS_MENU_ITEM);
+        display_blanking_status_plugin, HD_TYPE_STATUS_MENU_ITEM)
 
 static void
 display_blanking_status_plugin_class_finalize (
@@ -197,8 +198,8 @@ display_blanking_status_plugin_init (DisplayBlankingStatusPlugin *plugin)
     gconf_client_add_dir (priv->gconf_client, MODE_GCONF_ROOT,
             GCONF_CLIENT_PRELOAD_NONE, &error);
     g_assert (error == NULL);
-    gconf_client_notify_add (priv->gconf_client, MODE_GCONF_KEY, &on_gconf_notify,
-            priv, NULL, &error);
+    gconf_client_notify_add (priv->gconf_client, MODE_GCONF_KEY,
+            (GConfClientNotifyFunc) &on_gconf_notify, priv, NULL, &error);
     g_assert (error == NULL);
 
     gtk_container_add (GTK_CONTAINER (plugin), priv->button);
