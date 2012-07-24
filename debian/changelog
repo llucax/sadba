@@ -1,3 +1,10 @@
+status-area-displayblanking-applet (0.3) unstable; urgency=low
+
+  * Use a dialog to let the user pick the desired blanking mode instead of
+    cycling through all available modes.
+
+ -- Leandro Lucarella <luca@llucax.com.ar>  Tue, 26 Jul 2012 10:42:11 +0200
+
 status-area-displayblanking-applet (0.2) unstable; urgency=low
 
   * Subscribe to GConf notifications for changes in blanking mode.
