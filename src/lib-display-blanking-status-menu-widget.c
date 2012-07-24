@@ -74,8 +74,7 @@ GType display_blanking_status_plugin_get_type (void);
 #define MODE_GCONF_ROOT "/system/osso/dsm/display"
 #define MODE_GCONF_KEY  MODE_GCONF_ROOT "/inhibit_blank_mode"
 
-// Shoud contain one, and only one "%d"
-#define ICON_TEMPLATE "display-blanking-icon.%d"
+#define INHIBIT_MSG_INTERVAL 30 // in seconds
 
 #define GETTEXT_DOM "status-area-displayblanking-applet"
 #define gettext_noop(str) (str)
@@ -88,6 +87,14 @@ static const char *_DisplayBlankingDescription[BLANKING_MODES] =
     gettext_noop ("Blanking only on battery"),
     gettext_noop ("Both disabled"),
     gettext_noop ("Only dimming")
+};
+static const char *mode_icon_name[BLANKING_MODES] =
+{
+    "display-blanking-icon.0",
+    "display-blanking-icon.1",
+    "display-blanking-icon.2",
+    "display-blanking-icon.3",
+    "display-blanking-icon.4",
 };
 
 struct _DisplayBlankingStatusPluginPrivate
@@ -116,17 +123,10 @@ display_blanking_status_plugin_class_init (DisplayBlankingStatusPluginClass *c)
 static void
 update_gui (DisplayBlankingStatusPluginPrivate *priv)
 {
-    // Should be enough if BLANKING_MODES stays in 1 digit, "%d"
-    // provides space for that digit and '\0'
-    static char icon_name[sizeof (ICON_TEMPLATE)];
-
-    // Update button text and status bar icon
     gint mode = priv->blanking_mode;
     hildon_button_set_value (HILDON_BUTTON (priv->button),
             dgettext (GETTEXT_DOM, _DisplayBlankingDescription[mode]));
-    int r = snprintf (icon_name, sizeof (icon_name), ICON_TEMPLATE, mode);
-    g_assert (r < sizeof (icon_name)); // otherwise it was truncated
-    GtkWidget *icon = gtk_image_new_from_icon_name (icon_name,
+    GtkWidget *icon = gtk_image_new_from_icon_name (mode_icon_name[mode],
             GTK_ICON_SIZE_DIALOG);
     hildon_button_set_image (HILDON_BUTTON (priv->button), icon);
 }
