@@ -79,6 +79,8 @@ GType display_blanking_status_plugin_get_type (void);
 #define GETTEXT_DOM "status-area-displayblanking-applet"
 #define gettext_noop(str) (str)
 
+// Undocumented blanking modes as reported by David Weinehall from Nokia:
+// http://www.gossamer-threads.com/lists/maemo/developers/61201#61201
 #define BLANKING_MODES 5
 static const char *_DisplayBlankingDescription[BLANKING_MODES] =
 {
