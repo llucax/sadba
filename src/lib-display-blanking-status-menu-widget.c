@@ -174,8 +174,7 @@ on_mode_button_clicked (GtkWidget *button,
     gtk_box_pack_start (GTK_BOX (GTK_DIALOG (priv->mode_dialog)->vbox),
             pan_area, TRUE, TRUE, 0);
 
-    g_object_set (G_OBJECT (pan_area), "height-request",
-            MIN (350, BLANKING_MODES * 70), NULL);
+    gtk_widget_set_size_request (pan_area, -1, MIN (350, BLANKING_MODES * 70));
 
     gint mode = BLANKING_MODES;
     for (int i = 0; i < BLANKING_MODES; i++) {
