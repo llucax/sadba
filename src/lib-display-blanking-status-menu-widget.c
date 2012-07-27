@@ -183,6 +183,8 @@ on_mode_button_clicked (GtkWidget *button,
                     HILDON_BUTTON_ARRANGEMENT_VERTICAL,
                     dgettext (GETTEXT_DOM, (_DisplayBlankingDescription[i])),
                     NULL);
+        hildon_button_set_style (HILDON_BUTTON (button),
+            HILDON_BUTTON_STYLE_PICKER);
         GtkWidget *icon = gtk_image_new_from_icon_name (mode_icon_name[i],
                 GTK_ICON_SIZE_DIALOG);
         hildon_button_set_image (HILDON_BUTTON (button), icon);
