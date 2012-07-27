@@ -27,6 +27,8 @@
 #include <hildon/hildon.h>
 #include <libhildondesktop/libhildondesktop.h>
 #include <gconf/gconf-client.h>
+#include <dbus/dbus.h>
+#include <mce/dbus-names.h>
 
 
 #define TYPE_DISPLAY_BLANKING_STATUS_PLUGIN (display_blanking_status_plugin_get_type ())
@@ -98,12 +100,16 @@ static const char *mode_icon_name[BLANKING_MODES] =
     "display-blanking-icon.3",
     "display-blanking-icon.4",
 };
+#define INHIBIT_ICON_NAME "display-blanking-inhibit-icon"
 
 struct _DisplayBlankingStatusPluginPrivate
 {
     GConfClient *gconf_client;
+    DBusConnection* dbus_conn;
+    DBusMessage* dbus_msg;
     GtkWidget *mode_button;
     GtkWidget *mode_dialog;
+    gint inhibit_timer_id; // if == 0, no timer is set
     gpointer data;
 };
 
@@ -125,11 +131,19 @@ display_blanking_status_plugin_class_init (DisplayBlankingStatusPluginClass *c)
 static void
 update_mode_gui (gint mode, DisplayBlankingStatusPluginPrivate *priv)
 {
-    hildon_button_set_value (HILDON_BUTTON (priv->mode_button),
-            dgettext (GETTEXT_DOM, _DisplayBlankingDescription[mode]));
     GtkWidget *icon = gtk_image_new_from_icon_name (mode_icon_name[mode],
             GTK_ICON_SIZE_DIALOG);
-    hildon_button_set_image (HILDON_BUTTON (priv->mode_button), icon);
+    gtk_button_set_image (GTK_BUTTON (priv->mode_button), icon);
+}
+
+static gboolean
+on_timeout (DisplayBlankingStatusPluginPrivate *priv)
+{
+    dbus_bool_t ok = dbus_connection_send (priv->dbus_conn, priv->dbus_msg,
+            NULL);
+    g_assert (ok == TRUE);
+
+    return TRUE;
 }
 
 static void
@@ -211,6 +225,26 @@ on_mode_button_clicked (GtkWidget *button,
 }
 
 static void
+on_inhibit_button_clicked (GtkWidget *button,
+        DisplayBlankingStatusPluginPrivate *priv)
+{
+    GtkWidget *parent = gtk_widget_get_ancestor (GTK_WIDGET (priv->mode_button),
+            GTK_TYPE_WINDOW);
+    gtk_widget_hide (parent);
+
+    if (priv->inhibit_timer_id) {
+        gboolean ok = g_source_remove (priv->inhibit_timer_id);
+        g_assert (ok == TRUE);
+        priv->inhibit_timer_id = 0;
+    }
+    else {
+        priv->inhibit_timer_id = g_timeout_add_seconds (INHIBIT_MSG_INTERVAL,
+                (GSourceFunc) on_timeout, priv);
+        g_assert (priv->inhibit_timer_id > 0);
+    }
+}
+
+static void
 on_gconf_notify (GConfClient* client, guint cnxn_id, GConfEntry* entry,
         DisplayBlankingStatusPluginPrivate* priv)
 {
@@ -248,16 +282,27 @@ init_gconf (DisplayBlankingStatusPluginPrivate *priv)
 }
 
 static void
+init_dbus (DisplayBlankingStatusPluginPrivate *priv)
+{
+    DBusError error;
+    dbus_error_init (&error);
+
+    priv->dbus_conn = dbus_bus_get (DBUS_BUS_SYSTEM, &error);
+    g_assert (!dbus_error_is_set (&error));
+    g_assert (priv->dbus_conn != NULL);
+
+    priv->dbus_msg = dbus_message_new_method_call (MCE_SERVICE,
+            MCE_REQUEST_PATH, MCE_REQUEST_IF, MCE_PREVENT_BLANK_REQ);
+    g_assert (priv->dbus_msg != NULL);
+    dbus_message_set_no_reply (priv->dbus_msg, TRUE);
+}
+
+static void
 init_mode_gui (DisplayBlankingStatusPluginPrivate *priv)
 {
     priv->mode_dialog = NULL;
-    priv->mode_button = hildon_button_new (HILDON_SIZE_FINGER_HEIGHT |
-                HILDON_SIZE_AUTO_WIDTH, HILDON_BUTTON_ARRANGEMENT_VERTICAL);
-    gtk_button_set_alignment (GTK_BUTTON (priv->mode_button), 0, 0);
-    hildon_button_set_style (HILDON_BUTTON (priv->mode_button),
-            HILDON_BUTTON_STYLE_PICKER);
-    hildon_button_set_title (HILDON_BUTTON (priv->mode_button),
-            dgettext (GETTEXT_DOM, "Display blanking mode"));
+    priv->mode_button = hildon_gtk_button_new (HILDON_SIZE_FINGER_HEIGHT |
+                HILDON_SIZE_AUTO_WIDTH);
 
     GError* error = NULL;
     gint mode = gconf_client_get_int (priv->gconf_client, MODE_GCONF_KEY,
@@ -278,12 +323,27 @@ display_blanking_status_plugin_init (DisplayBlankingStatusPlugin *plugin)
     plugin->priv = priv;
 
     init_gconf (priv);
+    init_dbus (priv);
     init_mode_gui (priv);
 
-    gtk_container_add (GTK_CONTAINER (plugin), priv->mode_button);
+    priv->inhibit_timer_id = 0;
+    GtkWidget *inhibit_button = hildon_gtk_toggle_button_new (
+            HILDON_SIZE_FINGER_HEIGHT | HILDON_SIZE_AUTO_WIDTH);
+    gtk_toggle_button_set_mode (GTK_TOGGLE_BUTTON(inhibit_button), FALSE);
+    GtkWidget *icon = gtk_image_new_from_icon_name (INHIBIT_ICON_NAME,
+            GTK_ICON_SIZE_DIALOG);
+    gtk_button_set_image (GTK_BUTTON (inhibit_button), icon);
+    g_signal_connect (inhibit_button, "clicked",
+            G_CALLBACK (on_inhibit_button_clicked), priv);
 
-    gtk_widget_show_all (priv->mode_button);
+    GtkWidget *hbbox = gtk_hbutton_box_new (); //gtk_hbox_new (FALSE, 0);
+    g_assert (hbbox != NULL);
 
-    gtk_widget_show (GTK_WIDGET (plugin));
+    gtk_container_add (GTK_CONTAINER (hbbox), priv->mode_button);
+    gtk_container_add (GTK_CONTAINER (hbbox), inhibit_button);
+
+    gtk_container_add (GTK_CONTAINER (plugin), hbbox);
+
+    gtk_widget_show_all (GTK_WIDGET (plugin));
 }
 
