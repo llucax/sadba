@@ -336,7 +336,7 @@ display_blanking_status_plugin_init (DisplayBlankingStatusPlugin *plugin)
     g_signal_connect (inhibit_button, "clicked",
             G_CALLBACK (on_inhibit_button_clicked), priv);
 
-    GtkWidget *hbbox = gtk_hbutton_box_new (); //gtk_hbox_new (FALSE, 0);
+    GtkWidget *hbbox = gtk_hbutton_box_new ();
     g_assert (hbbox != NULL);
 
     gtk_container_add (GTK_CONTAINER (hbbox), priv->mode_button);
