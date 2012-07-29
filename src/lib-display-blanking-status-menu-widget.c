@@ -76,6 +76,9 @@ GType display_blanking_status_plugin_get_type (void);
 #define MODE_GCONF_ROOT "/system/osso/dsm/display"
 #define MODE_GCONF_KEY  MODE_GCONF_ROOT "/inhibit_blank_mode"
 
+#define HOURS_GCONF_KEY   "/apps/Maemo/sadba/timed_inhibit_hours"
+#define MINUTES_GCONF_KEY "/apps/Maemo/sadba/timed_inhibit_minutes"
+
 #define INHIBIT_MSG_INTERVAL 30 // in seconds
 
 #define GETTEXT_DOM "status-area-displayblanking-applet"
@@ -234,16 +237,20 @@ on_inhibit_button_clicked (GtkWidget *button,
 }
 
 static GtkWidget *
-timed_inhibit_picker_new (const gchar* title, gsize selected, guint max,
+timed_inhibit_picker_new (const gchar* title, gsize current, guint max,
         guint step)
 {
     g_assert (max < 100);
     static gchar buffer[3]; // 2 for the number + 1 for \0
 
     GtkWidget *selector = hildon_touch_selector_entry_new_text ();
-    for (int i = 0; i <= max; i += step)
+    gint selected = -1;
+    for (int i = 0; i*step <= max; i++) {
+        if (i*step == current)
+            selected = i;
         hildon_touch_selector_append_text (HILDON_TOUCH_SELECTOR (selector),
-                g_ascii_formatd (buffer, 3, "%.0f", i));
+                g_ascii_formatd (buffer, 3, "%.0f", i*step));
+    }
     hildon_gtk_entry_set_input_mode (GTK_ENTRY (
                 hildon_touch_selector_entry_get_entry (
                     HILDON_TOUCH_SELECTOR_ENTRY (selector))),
@@ -254,7 +261,10 @@ timed_inhibit_picker_new (const gchar* title, gsize selected, guint max,
     hildon_button_set_title (HILDON_BUTTON (picker), title);
     hildon_picker_button_set_selector (HILDON_PICKER_BUTTON (picker),
             HILDON_TOUCH_SELECTOR (selector));
-    hildon_picker_button_set_active (HILDON_PICKER_BUTTON (picker), selected);
+    hildon_picker_button_set_active (HILDON_PICKER_BUTTON (picker),
+            selected);
+    hildon_button_set_value (HILDON_BUTTON (picker),
+                g_ascii_formatd (buffer, 3, "%.0f", current));
 
     g_object_set_data (G_OBJECT (picker), "max", GUINT_TO_POINTER (max));
 
@@ -280,9 +290,13 @@ timed_inhibit_get_input (DisplayBlankingStatusPluginPrivate *priv)
             GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT, NULL);
 
     GtkWidget *h_picker = timed_inhibit_picker_new (
-            dgettext (GETTEXT_DOM, "Hours"), 1, 24, 1);
+            dgettext (GETTEXT_DOM, "Hours"),
+            gconf_client_get_int (priv->gconf_client, HOURS_GCONF_KEY, NULL),
+            24, 1);
     GtkWidget *m_picker = timed_inhibit_picker_new (
-            dgettext (GETTEXT_DOM, "Minutes"), 0, 60, 10);
+            dgettext (GETTEXT_DOM, "Minutes"),
+            gconf_client_get_int (priv->gconf_client, MINUTES_GCONF_KEY, NULL),
+            60, 10);
 
     GtkWidget *hbox = gtk_hbox_new (FALSE, 0);
     g_assert (hbox != NULL);
@@ -299,9 +313,18 @@ timed_inhibit_get_input (DisplayBlankingStatusPluginPrivate *priv)
     gint result = gtk_dialog_run (GTK_DIALOG (priv->timed_inhibit_dialog));
 
     guint timeout = 0;
-    if (result == GTK_RESPONSE_ACCEPT)
-        timeout = timed_inhibit_picker_get_value (h_picker) * 3600 +
-            timed_inhibit_picker_get_value (m_picker) * 60;
+    if (result == GTK_RESPONSE_ACCEPT) {
+        gint hours = timed_inhibit_picker_get_value (h_picker);
+        gint mins = timed_inhibit_picker_get_value (m_picker);
+
+        GError *e = NULL;
+        gconf_client_set_int (priv->gconf_client, HOURS_GCONF_KEY, hours, &e);
+        g_assert (e == NULL);
+        gconf_client_set_int (priv->gconf_client, MINUTES_GCONF_KEY, mins, &e);
+        g_assert (e == NULL);
+
+        timeout = hours*3600 + mins*60;
+    }
 
     gtk_widget_destroy (priv->timed_inhibit_dialog);
     priv->timed_inhibit_dialog = NULL;
