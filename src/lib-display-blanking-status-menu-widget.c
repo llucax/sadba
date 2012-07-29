@@ -163,14 +163,9 @@ on_mode_dialog_button_clicked (GtkWidget *button, GtkDialog *dialog)
     gtk_dialog_response (dialog, GTK_RESPONSE_OK);
 }
 
-static void
-on_mode_button_clicked (GtkWidget *button,
-        DisplayBlankingStatusPluginPrivate *priv)
+static gint
+mode_get_input (DisplayBlankingStatusPluginPrivate *priv)
 {
-    GtkWidget *parent = gtk_widget_get_ancestor (GTK_WIDGET (priv->mode_button),
-            GTK_TYPE_WINDOW);
-    gtk_widget_hide (parent);
-
     g_assert (priv->mode_dialog == NULL);
     priv->mode_dialog = gtk_dialog_new ();
     gtk_window_set_modal (GTK_WINDOW (priv->mode_dialog), TRUE);
@@ -209,10 +204,25 @@ on_mode_button_clicked (GtkWidget *button,
                 G_CALLBACK (on_mode_dialog_button_clicked), priv->mode_dialog);
     }
 
-    gtk_widget_show_all (priv->mode_dialog);
-
     g_object_set_data (G_OBJECT (priv->mode_dialog), "mode", &mode);
+    gtk_widget_show_all (priv->mode_dialog);
     gtk_dialog_run (GTK_DIALOG (priv->mode_dialog));
+
+    gtk_widget_destroy (priv->mode_dialog);
+    priv->mode_dialog = NULL;
+
+    return mode;
+}
+
+static void
+on_mode_button_clicked (GtkWidget *button,
+        DisplayBlankingStatusPluginPrivate *priv)
+{
+    GtkWidget *parent = gtk_widget_get_ancestor (GTK_WIDGET (priv->mode_button),
+            GTK_TYPE_WINDOW);
+    gtk_widget_hide (parent);
+
+    gint mode = mode_get_input (priv);
 
     if (mode != BLANKING_MODES) {
         // will trigger the gconf notify signal
@@ -220,9 +230,6 @@ on_mode_button_clicked (GtkWidget *button,
         gconf_client_set_int (priv->gconf_client, MODE_GCONF_KEY, mode, &error);
         g_assert (error == NULL);
     }
-
-    gtk_widget_destroy (priv->mode_dialog);
-    priv->mode_dialog = NULL;
 }
 
 static void
