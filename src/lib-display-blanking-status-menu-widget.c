@@ -100,7 +100,8 @@ static const char *mode_icon_name[BLANKING_MODES] =
     "display-blanking-icon.3",
     "display-blanking-icon.4",
 };
-#define INHIBIT_ICON_NAME "display-blanking-inhibit-icon"
+#define INHIBIT_ICON_NAME       "display-blanking-inhibit-icon"
+#define TIMED_INHIBIT_ICON_NAME "display-blanking-inhibit-icon.timed"
 
 struct _DisplayBlankingStatusPluginPrivate
 {
@@ -109,7 +110,16 @@ struct _DisplayBlankingStatusPluginPrivate
     DBusMessage* dbus_msg;
     GtkWidget *mode_button;
     GtkWidget *mode_dialog;
-    gint inhibit_timer_id; // if == 0, no timer is set
+    GtkWidget *inhibit_button;
+    GtkWidget *timed_inhibit_button;
+    GtkWidget *timed_inhibit_dialog;
+    gint inhibit_timer_id;       // if == 0
+    gint timed_inhibit_timer_id; //     no timer is set
+    // gtk_toggle_button_set_active () triggers the "clicked" signal on the
+    // affected button, since we don't want to process the signal while
+    // changing the "pressed" state (we want just the GUI to change, we use
+    // this flag to ignore the "clicke" signal handler when is TRUE
+    gboolean inhibit_in_signal;
     gpointer data;
 };
 
@@ -136,14 +146,218 @@ update_mode_gui (gint mode, DisplayBlankingStatusPluginPrivate *priv)
     gtk_button_set_image (GTK_BUTTON (priv->mode_button), icon);
 }
 
+static void
+disable_timer (gint *timer_id)
+{
+    g_assert (*timer_id != 0);
+    gboolean ok = g_source_remove (*timer_id);
+    g_assert (ok == TRUE);
+    *timer_id = 0;
+}
+
 static gboolean
-on_timeout (DisplayBlankingStatusPluginPrivate *priv)
+on_inhibit_timeout (DisplayBlankingStatusPluginPrivate *priv)
 {
     dbus_bool_t ok = dbus_connection_send (priv->dbus_conn, priv->dbus_msg,
             NULL);
     g_assert (ok == TRUE);
 
     return TRUE;
+}
+
+static gboolean
+on_timed_inhibit_timeout (DisplayBlankingStatusPluginPrivate *priv)
+{
+    disable_timer (&(priv->inhibit_timer_id));
+    disable_timer (&(priv->timed_inhibit_timer_id));
+
+    priv->inhibit_in_signal = TRUE;
+    gtk_toggle_button_set_active (
+            GTK_TOGGLE_BUTTON (priv->timed_inhibit_button), FALSE);
+    priv->inhibit_in_signal = FALSE;
+
+    GtkWidget *banner = hildon_banner_show_information (
+            priv->timed_inhibit_button, NULL,
+            dgettext (GETTEXT_DOM, "Display blanking inhibition disabled"));
+    hildon_banner_set_timeout (HILDON_BANNER (banner), 5000);
+
+    return FALSE;
+}
+
+static void
+enable_inhibit_timer (DisplayBlankingStatusPluginPrivate *priv)
+{
+    g_assert (priv->inhibit_timer_id == 0);
+    priv->inhibit_timer_id = g_timeout_add_seconds (INHIBIT_MSG_INTERVAL,
+            (GSourceFunc) on_inhibit_timeout, priv);
+    g_assert (priv->inhibit_timer_id > 0);
+}
+
+static void
+on_inhibit_button_clicked (GtkWidget *button,
+        DisplayBlankingStatusPluginPrivate *priv)
+{
+    if (priv->inhibit_in_signal)
+        return;
+
+    GtkWidget *parent = gtk_widget_get_ancestor (button, GTK_TYPE_WINDOW);
+    gtk_widget_hide (parent);
+
+    gboolean self_pressed = gtk_toggle_button_get_active (
+            GTK_TOGGLE_BUTTON (button));
+    gboolean other_pressed = gtk_toggle_button_get_active (
+            GTK_TOGGLE_BUTTON (priv->timed_inhibit_button));
+
+    if (self_pressed && other_pressed) {
+        g_assert (priv->inhibit_timer_id != 0);
+
+        disable_timer (&(priv->timed_inhibit_timer_id));
+
+        priv->inhibit_in_signal = TRUE;
+        gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (
+                priv->timed_inhibit_button), FALSE);
+        priv->inhibit_in_signal = FALSE;
+    }
+    else if (self_pressed && !other_pressed) {
+        g_assert (priv->timed_inhibit_timer_id == 0);
+
+        enable_inhibit_timer (priv);
+    }
+    else if (!self_pressed) {
+        g_assert (!other_pressed);
+        g_assert (priv->timed_inhibit_timer_id == 0);
+
+        disable_timer (&(priv->inhibit_timer_id));
+    }
+    else
+        g_assert (FALSE);
+}
+
+static GtkWidget *
+timed_inhibit_picker_new (const gchar* title, gsize selected, guint max,
+        guint step)
+{
+    g_assert (max < 100);
+    static gchar buffer[3]; // 2 for the number + 1 for \0
+
+    GtkWidget *selector = hildon_touch_selector_entry_new_text ();
+    for (int i = 0; i <= max; i += step)
+        hildon_touch_selector_append_text (HILDON_TOUCH_SELECTOR (selector),
+                g_ascii_formatd (buffer, 3, "%.0f", i));
+    hildon_gtk_entry_set_input_mode (GTK_ENTRY (
+                hildon_touch_selector_entry_get_entry (
+                    HILDON_TOUCH_SELECTOR_ENTRY (selector))),
+            HILDON_GTK_INPUT_MODE_NUMERIC);
+
+    GtkWidget *picker = hildon_picker_button_new (HILDON_SIZE_FINGER_HEIGHT,
+            HILDON_BUTTON_ARRANGEMENT_VERTICAL);
+    hildon_button_set_title (HILDON_BUTTON (picker), title);
+    hildon_picker_button_set_selector (HILDON_PICKER_BUTTON (picker),
+            HILDON_TOUCH_SELECTOR (selector));
+    hildon_picker_button_set_active (HILDON_PICKER_BUTTON (picker), selected);
+
+    g_object_set_data (G_OBJECT (picker), "max", GUINT_TO_POINTER (max));
+
+    return picker;
+}
+
+static guint
+timed_inhibit_picker_get_value (GtkWidget *picker)
+{
+    guint max = GPOINTER_TO_UINT (g_object_get_data (G_OBJECT (picker), "max"));
+
+    return CLAMP (g_ascii_strtod (hildon_button_get_value (
+                    HILDON_BUTTON (picker)), NULL), 0, max);
+}
+
+static guint
+timed_inhibit_get_input (DisplayBlankingStatusPluginPrivate *priv)
+{
+    g_assert (priv->timed_inhibit_dialog == NULL);
+    priv->timed_inhibit_dialog = gtk_dialog_new_with_buttons (
+            dgettext (GETTEXT_DOM, "Inhibit display blanking for..."), NULL,
+            GTK_DIALOG_MODAL, GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
+            GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT, NULL);
+
+    GtkWidget *h_picker = timed_inhibit_picker_new (
+            dgettext (GETTEXT_DOM, "Hours"), 1, 24, 1);
+    GtkWidget *m_picker = timed_inhibit_picker_new (
+            dgettext (GETTEXT_DOM, "Minutes"), 0, 60, 10);
+
+    GtkWidget *hbox = gtk_hbox_new (FALSE, 0);
+    g_assert (hbox != NULL);
+
+    gtk_container_add (GTK_CONTAINER (hbox), h_picker);
+    gtk_container_add (GTK_CONTAINER (hbox), m_picker);
+
+    GtkWidget *content_area = gtk_dialog_get_content_area (
+            GTK_DIALOG (priv->timed_inhibit_dialog));
+    gtk_container_add (GTK_CONTAINER (content_area), hbox);
+
+    gtk_widget_show_all (priv->timed_inhibit_dialog);
+
+    gint result = gtk_dialog_run (GTK_DIALOG (priv->timed_inhibit_dialog));
+
+    guint timeout = 0;
+    if (result == GTK_RESPONSE_ACCEPT)
+        timeout = timed_inhibit_picker_get_value (h_picker) * 3600 +
+            timed_inhibit_picker_get_value (m_picker) * 60;
+
+    gtk_widget_destroy (priv->timed_inhibit_dialog);
+    priv->timed_inhibit_dialog = NULL;
+
+    return timeout;
+}
+
+static void
+on_timed_inhibit_button_clicked (GtkWidget *button,
+        DisplayBlankingStatusPluginPrivate *priv)
+{
+    if (priv->inhibit_in_signal)
+        return;
+
+    GtkWidget *parent = gtk_widget_get_ancestor (GTK_WIDGET (priv->mode_button),
+            GTK_TYPE_WINDOW);
+    gtk_widget_hide (parent);
+
+    gboolean self_pressed = gtk_toggle_button_get_active (
+            GTK_TOGGLE_BUTTON (button));
+    gboolean other_pressed = gtk_toggle_button_get_active (
+            GTK_TOGGLE_BUTTON (priv->inhibit_button));
+
+    if (self_pressed) {
+        g_assert (priv->timed_inhibit_timer_id == 0);
+        if (other_pressed)
+            g_assert (priv->inhibit_timer_id != 0);
+
+        guint timeout = timed_inhibit_get_input (priv);
+        if (timeout) {
+            if (other_pressed) {
+                priv->inhibit_in_signal = TRUE;
+                gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (
+                            priv->inhibit_button), FALSE);
+                priv->inhibit_in_signal = FALSE;
+            }
+            else
+                enable_inhibit_timer (priv);
+
+            priv->timed_inhibit_timer_id = g_timeout_add_seconds (timeout,
+                    (GSourceFunc) on_timed_inhibit_timeout, priv);
+            g_assert (priv->timed_inhibit_timer_id > 0);
+        }
+        else {
+            priv->inhibit_in_signal = TRUE;
+            gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (
+                        priv->timed_inhibit_button), FALSE);
+            priv->inhibit_in_signal = FALSE;
+        }
+    }
+    else { // !self_pressed
+        g_assert (!other_pressed);
+
+        disable_timer (&(priv->inhibit_timer_id));
+        disable_timer (&(priv->timed_inhibit_timer_id));
+    }
 }
 
 static void
@@ -233,26 +447,6 @@ on_mode_button_clicked (GtkWidget *button,
 }
 
 static void
-on_inhibit_button_clicked (GtkWidget *button,
-        DisplayBlankingStatusPluginPrivate *priv)
-{
-    GtkWidget *parent = gtk_widget_get_ancestor (GTK_WIDGET (priv->mode_button),
-            GTK_TYPE_WINDOW);
-    gtk_widget_hide (parent);
-
-    if (priv->inhibit_timer_id) {
-        gboolean ok = g_source_remove (priv->inhibit_timer_id);
-        g_assert (ok == TRUE);
-        priv->inhibit_timer_id = 0;
-    }
-    else {
-        priv->inhibit_timer_id = g_timeout_add_seconds (INHIBIT_MSG_INTERVAL,
-                (GSourceFunc) on_timeout, priv);
-        g_assert (priv->inhibit_timer_id > 0);
-    }
-}
-
-static void
 on_gconf_notify (GConfClient* client, guint cnxn_id, GConfEntry* entry,
         DisplayBlankingStatusPluginPrivate* priv)
 {
@@ -322,6 +516,38 @@ init_mode_gui (DisplayBlankingStatusPluginPrivate *priv)
             G_CALLBACK (on_mode_button_clicked), priv);
 }
 
+static GtkWidget *
+inhibit_button_new (const gchar *icon_name,
+        void (*cb) (GtkWidget *, DisplayBlankingStatusPluginPrivate *),
+        gpointer cb_data)
+{
+
+    GtkWidget *b = hildon_gtk_toggle_button_new (HILDON_SIZE_FINGER_HEIGHT |
+            HILDON_SIZE_AUTO_WIDTH);
+    gtk_toggle_button_set_mode (GTK_TOGGLE_BUTTON(b), FALSE);
+    GtkWidget *icon = gtk_image_new_from_icon_name (icon_name,
+            GTK_ICON_SIZE_DIALOG);
+    gtk_button_set_image (GTK_BUTTON (b), icon);
+    g_signal_connect (b, "clicked", G_CALLBACK (cb), cb_data);
+
+    return b;
+}
+
+static void
+init_inhibit_gui (DisplayBlankingStatusPluginPrivate *priv)
+{
+    priv->inhibit_in_signal = FALSE;
+
+    priv->inhibit_timer_id = 0;
+    priv->timed_inhibit_timer_id = 0;
+
+    priv->inhibit_button = inhibit_button_new (INHIBIT_ICON_NAME,
+            on_inhibit_button_clicked, priv);
+
+    priv->timed_inhibit_button = inhibit_button_new (
+            TIMED_INHIBIT_ICON_NAME, on_timed_inhibit_button_clicked, priv);
+}
+
 static void
 display_blanking_status_plugin_init (DisplayBlankingStatusPlugin *plugin)
 {
@@ -333,22 +559,14 @@ display_blanking_status_plugin_init (DisplayBlankingStatusPlugin *plugin)
     init_gconf (priv);
     init_dbus (priv);
     init_mode_gui (priv);
-
-    priv->inhibit_timer_id = 0;
-    GtkWidget *inhibit_button = hildon_gtk_toggle_button_new (
-            HILDON_SIZE_FINGER_HEIGHT | HILDON_SIZE_AUTO_WIDTH);
-    gtk_toggle_button_set_mode (GTK_TOGGLE_BUTTON(inhibit_button), FALSE);
-    GtkWidget *icon = gtk_image_new_from_icon_name (INHIBIT_ICON_NAME,
-            GTK_ICON_SIZE_DIALOG);
-    gtk_button_set_image (GTK_BUTTON (inhibit_button), icon);
-    g_signal_connect (inhibit_button, "clicked",
-            G_CALLBACK (on_inhibit_button_clicked), priv);
+    init_inhibit_gui (priv);
 
     GtkWidget *hbbox = gtk_hbutton_box_new ();
     g_assert (hbbox != NULL);
 
     gtk_container_add (GTK_CONTAINER (hbbox), priv->mode_button);
-    gtk_container_add (GTK_CONTAINER (hbbox), inhibit_button);
+    gtk_container_add (GTK_CONTAINER (hbbox), priv->inhibit_button);
+    gtk_container_add (GTK_CONTAINER (hbbox), priv->timed_inhibit_button);
 
     gtk_container_add (GTK_CONTAINER (plugin), hbbox);
 
