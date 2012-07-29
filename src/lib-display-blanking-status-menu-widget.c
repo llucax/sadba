@@ -185,8 +185,9 @@ on_mode_button_clicked (GtkWidget *button,
 
     hildon_pannable_area_add_with_viewport (HILDON_PANNABLE_AREA (pan_area),
             vbox);
-    gtk_box_pack_start (GTK_BOX (GTK_DIALOG (priv->mode_dialog)->vbox),
-            pan_area, TRUE, TRUE, 0);
+    GtkWidget *content_area = gtk_dialog_get_content_area (
+            GTK_DIALOG (priv->mode_dialog));
+    gtk_box_pack_start (GTK_BOX (content_area), pan_area, TRUE, TRUE, 0);
 
     gtk_widget_set_size_request (pan_area, -1, MIN (350, BLANKING_MODES * 70));
 
