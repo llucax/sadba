@@ -1,3 +1,11 @@
+status-area-displayblanking-applet (0.5) unstable; urgency=low
+
+  * Add timed display blanking inhibition button (the user can input a timeout
+    after which display blanking inhibition will be disabled automatically).
+  * Do some more code cleanup.
+
+ -- Leandro Lucarella <luca@llucax.com.ar>  Tue, 29 Jul 2012 20:29:11 +0200
+
 status-area-displayblanking-applet (0.4) unstable; urgency=low
 
   * Add display blanking inhibition button.
