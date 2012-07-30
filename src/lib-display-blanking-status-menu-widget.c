@@ -97,6 +97,14 @@ static const char *mode_title[BLANKING_MODES] =
     N_ ("Both disabled"),
     N_ ("Only dimming")
 };
+static const char *mode_desc[BLANKING_MODES] =
+{
+    N_ ("Blanking and dimming always enabled"),
+    N_ ("Blanking and dimming enabled only on battery"),
+    N_ ("Always dim, blank only on battery"),
+    N_ ("Blanking and dimming always disabled"),
+    N_ ("Blanking disabled, dimming enabled")
+};
 static const char *mode_icon_name[BLANKING_MODES] =
 {
     "display-blanking-icon.0",
@@ -444,7 +452,7 @@ mode_get_input (DisplayBlankingStatusPluginPrivate *priv)
         GtkWidget *button =
                 hildon_button_new_with_text (HILDON_SIZE_FINGER_HEIGHT,
                     HILDON_BUTTON_ARRANGEMENT_VERTICAL, _ (mode_title[i]),
-                    NULL);
+                    _ (mode_desc[i]));
         hildon_button_set_style (HILDON_BUTTON (button),
             HILDON_BUTTON_STYLE_PICKER);
         GtkWidget *icon = gtk_image_new_from_icon_name (mode_icon_name[i],
