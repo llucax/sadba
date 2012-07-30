@@ -82,18 +82,20 @@ GType display_blanking_status_plugin_get_type (void);
 #define INHIBIT_MSG_INTERVAL 30 // in seconds
 
 #define GETTEXT_DOM "status-area-displayblanking-applet"
+#define _(str) dgettext (GETTEXT_DOM, (str))
 #define gettext_noop(str) (str)
+#define N_(str) gettext_noop(str)
 
 // Undocumented blanking modes as reported by David Weinehall from Nokia:
 // http://www.gossamer-threads.com/lists/maemo/developers/61201#61201
 #define BLANKING_MODES 5
 static const char *mode_title[BLANKING_MODES] =
 {
-    gettext_noop ("Both enabled"),
-    gettext_noop ("Both only on battery"),
-    gettext_noop ("Blanking only on battery"),
-    gettext_noop ("Both disabled"),
-    gettext_noop ("Only dimming")
+    N_ ("Both enabled"),
+    N_ ("Both only on battery"),
+    N_ ("Blanking only on battery"),
+    N_ ("Both disabled"),
+    N_ ("Only dimming")
 };
 static const char *mode_icon_name[BLANKING_MODES] =
 {
@@ -191,7 +193,7 @@ on_timed_inhibit_timeout (DisplayBlankingStatusPluginPrivate *priv)
 
     GtkWidget *banner = hildon_banner_show_information (
             priv->timed_inhibit_button, NULL,
-            dgettext (GETTEXT_DOM, "Display blanking inhibition disabled"));
+            _ ("Display blanking inhibition disabled"));
     hildon_banner_set_timeout (HILDON_BANNER (banner), 5000);
 
     return FALSE;
@@ -301,16 +303,14 @@ timed_inhibit_get_input (DisplayBlankingStatusPluginPrivate *priv)
 {
     g_assert (priv->timed_inhibit_dialog == NULL);
     priv->timed_inhibit_dialog = gtk_dialog_new_with_buttons (
-            dgettext (GETTEXT_DOM, "Inhibit display blanking for..."), NULL,
-            GTK_DIALOG_MODAL, GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
+            _ ("Inhibit display blanking for..."), NULL, GTK_DIALOG_MODAL,
+            GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
             GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT, NULL);
 
-    GtkWidget *h_picker = timed_inhibit_picker_new (
-            dgettext (GETTEXT_DOM, "Hours"),
+    GtkWidget *h_picker = timed_inhibit_picker_new (_ ("Hours"),
             gconf_client_get_int (priv->gconf_client, HOURS_GCONF_KEY, NULL),
             24, 1);
-    GtkWidget *m_picker = timed_inhibit_picker_new (
-            dgettext (GETTEXT_DOM, "Minutes"),
+    GtkWidget *m_picker = timed_inhibit_picker_new (_ ("Minutes"),
             gconf_client_get_int (priv->gconf_client, MINUTES_GCONF_KEY, NULL),
             60, 10);
 
@@ -423,7 +423,7 @@ mode_get_input (DisplayBlankingStatusPluginPrivate *priv)
     priv->mode_dialog = gtk_dialog_new ();
     gtk_window_set_modal (GTK_WINDOW (priv->mode_dialog), TRUE);
     gtk_window_set_title (GTK_WINDOW (priv->mode_dialog),
-            dgettext (GETTEXT_DOM, "Select display blanking mode"));
+            _ ("Select display blanking mode"));
 
     GtkWidget *pan_area = hildon_pannable_area_new ();
     g_assert (pan_area != NULL);
@@ -443,8 +443,8 @@ mode_get_input (DisplayBlankingStatusPluginPrivate *priv)
     for (int i = 0; i < BLANKING_MODES; i++) {
         GtkWidget *button =
                 hildon_button_new_with_text (HILDON_SIZE_FINGER_HEIGHT,
-                    HILDON_BUTTON_ARRANGEMENT_VERTICAL,
-                    dgettext (GETTEXT_DOM, (mode_title[i])), NULL);
+                    HILDON_BUTTON_ARRANGEMENT_VERTICAL, _ (mode_title[i]),
+                    NULL);
         hildon_button_set_style (HILDON_BUTTON (button),
             HILDON_BUTTON_STYLE_PICKER);
         GtkWidget *icon = gtk_image_new_from_icon_name (mode_icon_name[i],

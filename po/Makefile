@@ -46,7 +46,7 @@ all: compile
 compile: $(CATALOGS)
 
 $(GETTEXT_PACKAGE).pot: $(POTFILES)
-	$(XGETTEXT) --package-name=$(PACKAGE) -o $(GETTEXT_PACKAGE).pot $(POTFILES)
+	$(XGETTEXT) -k_ -kN_ --package-name=$(PACKAGE) -o $(GETTEXT_PACKAGE).pot $(POTFILES)
 
 install: all
 	@linguas="$(USE_LINGUAS)"; \
