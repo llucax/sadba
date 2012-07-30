@@ -1,0 +1,2 @@
+#!/bin/sh
+exec gtk-update-icon-cache -f /usr/share/icons/hicolor
