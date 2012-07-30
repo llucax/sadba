@@ -412,7 +412,7 @@ on_mode_dialog_button_clicked (GtkWidget *button, GtkDialog *dialog)
 {
     const gchar *title = hildon_button_get_title (HILDON_BUTTON (button));
 
-    gint *mode = (gint *) g_object_get_data (G_OBJECT(dialog), "mode");
+    gint *mode = (gint *) g_object_get_data (G_OBJECT (dialog), "mode");
     g_assert (mode != NULL);
 
     for (*mode = 0; *mode < BLANKING_MODES; (*mode)++) {
@@ -570,7 +570,7 @@ inhibit_button_new (const gchar *icon_name,
 
     GtkWidget *b = hildon_gtk_toggle_button_new (HILDON_SIZE_FINGER_HEIGHT |
             HILDON_SIZE_AUTO_WIDTH);
-    gtk_toggle_button_set_mode (GTK_TOGGLE_BUTTON(b), FALSE);
+    gtk_toggle_button_set_mode (GTK_TOGGLE_BUTTON (b), FALSE);
     GtkWidget *icon = gtk_image_new_from_icon_name (icon_name,
             GTK_ICON_SIZE_DIALOG);
     gtk_button_set_image (GTK_BUTTON (b), icon);
