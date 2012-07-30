@@ -105,9 +105,11 @@ static const char *mode_icon_name[BLANKING_MODES] =
 };
 #define INHIBIT_ICON_NAME       "display-blanking-inhibit-icon"
 #define TIMED_INHIBIT_ICON_NAME "display-blanking-inhibit-icon.timed"
+#define INHIBIT_STATUS_ICON_NAME "display-blanking-status"
 
 struct _DisplayBlankingStatusPluginPrivate
 {
+    DisplayBlankingStatusPlugin* plugin;
     GConfClient *gconf_client;
     DBusConnection* dbus_conn;
     DBusMessage* dbus_msg;
@@ -158,6 +160,14 @@ disable_timer (gint *timer_id)
     *timer_id = 0;
 }
 
+static void
+disable_inhibition (DisplayBlankingStatusPluginPrivate *priv)
+{
+    disable_timer (&(priv->inhibit_timer_id));
+    hd_status_plugin_item_set_status_area_icon (
+            HD_STATUS_PLUGIN_ITEM (priv->plugin), NULL);
+}
+
 static gboolean
 on_inhibit_timeout (DisplayBlankingStatusPluginPrivate *priv)
 {
@@ -171,7 +181,7 @@ on_inhibit_timeout (DisplayBlankingStatusPluginPrivate *priv)
 static gboolean
 on_timed_inhibit_timeout (DisplayBlankingStatusPluginPrivate *priv)
 {
-    disable_timer (&(priv->inhibit_timer_id));
+    disable_inhibition (priv);
     disable_timer (&(priv->timed_inhibit_timer_id));
 
     priv->inhibit_in_signal = TRUE;
@@ -188,12 +198,18 @@ on_timed_inhibit_timeout (DisplayBlankingStatusPluginPrivate *priv)
 }
 
 static void
-enable_inhibit_timer (DisplayBlankingStatusPluginPrivate *priv)
+enable_inhibition (DisplayBlankingStatusPluginPrivate *priv)
 {
     g_assert (priv->inhibit_timer_id == 0);
     priv->inhibit_timer_id = g_timeout_add_seconds (INHIBIT_MSG_INTERVAL,
             (GSourceFunc) on_inhibit_timeout, priv);
     g_assert (priv->inhibit_timer_id > 0);
+
+    GtkIconTheme *icon_theme = gtk_icon_theme_get_default ();
+    GdkPixbuf *pixbuf = gtk_icon_theme_load_icon (icon_theme,
+            INHIBIT_STATUS_ICON_NAME, 18, GTK_ICON_LOOKUP_NO_SVG, NULL);
+    hd_status_plugin_item_set_status_area_icon (
+            HD_STATUS_PLUGIN_ITEM (priv->plugin), pixbuf);
 }
 
 static void
@@ -224,13 +240,13 @@ on_inhibit_button_clicked (GtkWidget *button,
     else if (self_pressed && !other_pressed) {
         g_assert (priv->timed_inhibit_timer_id == 0);
 
-        enable_inhibit_timer (priv);
+        enable_inhibition (priv);
     }
     else if (!self_pressed) {
         g_assert (!other_pressed);
         g_assert (priv->timed_inhibit_timer_id == 0);
 
-        disable_timer (&(priv->inhibit_timer_id));
+        disable_inhibition (priv);
     }
     else
         g_assert (FALSE);
@@ -362,7 +378,7 @@ on_timed_inhibit_button_clicked (GtkWidget *button,
                 priv->inhibit_in_signal = FALSE;
             }
             else
-                enable_inhibit_timer (priv);
+                enable_inhibition (priv);
 
             priv->timed_inhibit_timer_id = g_timeout_add_seconds (timeout,
                     (GSourceFunc) on_timed_inhibit_timeout, priv);
@@ -378,7 +394,7 @@ on_timed_inhibit_button_clicked (GtkWidget *button,
     else { // !self_pressed
         g_assert (!other_pressed);
 
-        disable_timer (&(priv->inhibit_timer_id));
+        disable_inhibition (priv);
         disable_timer (&(priv->timed_inhibit_timer_id));
     }
 }
@@ -578,6 +594,7 @@ display_blanking_status_plugin_init (DisplayBlankingStatusPlugin *plugin)
 
     priv = DISPLAY_BLANKING_STATUS_PLUGIN_GET_PRIVATE (plugin);
     plugin->priv = priv;
+    priv->plugin = plugin;
 
     init_gconf (priv);
     init_dbus (priv);
