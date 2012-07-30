@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: status-area-displayblanking-applet\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-07-10 03:19+0200\n"
+"POT-Creation-Date: 2012-07-30 19:39+0200\n"
 "PO-Revision-Date: 2012-07-10 02:14+0200\n"
 "Last-Translator: Leandro Lucarella <luca@llucax.com.ar>\n"
 "Language-Team: Leandro Lucarella <luca@llucax.com.ar>\n"
@@ -15,30 +15,62 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../src/lib-display-blanking-status-menu-widget.c:45
-msgid "Enabled"
-msgstr ""
-
-#: ../src/lib-display-blanking-status-menu-widget.c:46
-msgid "Only on battery"
-msgstr ""
-
-#: ../src/lib-display-blanking-status-menu-widget.c:47
-msgid "Blanking only on battery"
-msgstr ""
-
-#: ../src/lib-display-blanking-status-menu-widget.c:48
-msgid "Disabled"
-msgstr ""
-
-#: ../src/lib-display-blanking-status-menu-widget.c:49
-msgid "Only dimming"
+#: ../src/lib-display-blanking-status-menu-widget.c:94
+msgid "Both enabled"
 msgstr ""
 
 #: ../src/lib-display-blanking-status-menu-widget.c:95
-msgid "Changed display blanking mode to: %s"
+msgid "Both only on battery"
 msgstr ""
 
-#: ../src/lib-display-blanking-status-menu-widget.c:117
-msgid "Display blanking mode"
+#: ../src/lib-display-blanking-status-menu-widget.c:96
+msgid "Blanking only on battery"
+msgstr ""
+
+#: ../src/lib-display-blanking-status-menu-widget.c:97
+msgid "Both disabled"
+msgstr ""
+
+#: ../src/lib-display-blanking-status-menu-widget.c:98
+msgid "Only dimming"
+msgstr ""
+
+#: ../src/lib-display-blanking-status-menu-widget.c:102
+msgid "Blanking and dimming always enabled"
+msgstr ""
+
+#: ../src/lib-display-blanking-status-menu-widget.c:103
+msgid "Blanking and dimming enabled only on battery"
+msgstr ""
+
+#: ../src/lib-display-blanking-status-menu-widget.c:104
+msgid "Always dim, blank only on battery"
+msgstr ""
+
+#: ../src/lib-display-blanking-status-menu-widget.c:105
+msgid "Blanking and dimming always disabled"
+msgstr ""
+
+#: ../src/lib-display-blanking-status-menu-widget.c:106
+msgid "Blanking disabled, dimming enabled"
+msgstr ""
+
+#: ../src/lib-display-blanking-status-menu-widget.c:204
+msgid "Display blanking inhibition disabled"
+msgstr ""
+
+#: ../src/lib-display-blanking-status-menu-widget.c:314
+msgid "Inhibit display blanking for..."
+msgstr ""
+
+#: ../src/lib-display-blanking-status-menu-widget.c:318
+msgid "Hours"
+msgstr ""
+
+#: ../src/lib-display-blanking-status-menu-widget.c:321
+msgid "Minutes"
+msgstr ""
+
+#: ../src/lib-display-blanking-status-menu-widget.c:434
+msgid "Select display blanking mode"
 msgstr ""

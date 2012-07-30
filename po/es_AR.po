@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: status-area-displayblanking-applet\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-07-10 03:19+0200\n"
+"POT-Creation-Date: 2012-07-30 19:39+0200\n"
 "PO-Revision-Date: 2012-07-10 02:14+0200\n"
 "Last-Translator: Leandro Lucarella <luca@llucax.com.ar>\n"
 "Language-Team: Leandro Lucarella <luca@llucax.com.ar>\n"
@@ -15,30 +15,62 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../src/lib-display-blanking-status-menu-widget.c:45
-msgid "Enabled"
-msgstr "Activado"
+#: ../src/lib-display-blanking-status-menu-widget.c:94
+msgid "Both enabled"
+msgstr "Ambos activados"
 
-#: ../src/lib-display-blanking-status-menu-widget.c:46
-msgid "Only on battery"
-msgstr "Sólo con batería"
+#: ../src/lib-display-blanking-status-menu-widget.c:95
+msgid "Both only on battery"
+msgstr "Ambos sólo con batería"
 
-#: ../src/lib-display-blanking-status-menu-widget.c:47
+#: ../src/lib-display-blanking-status-menu-widget.c:96
 msgid "Blanking only on battery"
 msgstr "Apagar sólo con batería"
 
-#: ../src/lib-display-blanking-status-menu-widget.c:48
-msgid "Disabled"
-msgstr "Desactivado"
+#: ../src/lib-display-blanking-status-menu-widget.c:97
+msgid "Both disabled"
+msgstr "Ambos desactivados"
 
-#: ../src/lib-display-blanking-status-menu-widget.c:49
+#: ../src/lib-display-blanking-status-menu-widget.c:98
 msgid "Only dimming"
-msgstr "Sólo ahorro de energía"
+msgstr "Sólo oscurecer"
 
-#: ../src/lib-display-blanking-status-menu-widget.c:95
-msgid "Changed display blanking mode to: %s"
-msgstr "Modo de apagado de pantalla cambiado a: %s"
+#: ../src/lib-display-blanking-status-menu-widget.c:102
+msgid "Blanking and dimming always enabled"
+msgstr "Apagar y oscurecer siempre activado"
 
-#: ../src/lib-display-blanking-status-menu-widget.c:117
-msgid "Display blanking mode"
-msgstr "Apagado de pantalla"
+#: ../src/lib-display-blanking-status-menu-widget.c:103
+msgid "Blanking and dimming enabled only on battery"
+msgstr "Apagar y oscurecer sólo con batería"
+
+#: ../src/lib-display-blanking-status-menu-widget.c:104
+msgid "Always dim, blank only on battery"
+msgstr "Oscurecer siempre, apagar sólo con batería"
+
+#: ../src/lib-display-blanking-status-menu-widget.c:105
+msgid "Blanking and dimming always disabled"
+msgstr "Apagar y oscurecer siempre activado"
+
+#: ../src/lib-display-blanking-status-menu-widget.c:106
+msgid "Blanking disabled, dimming enabled"
+msgstr "Apagar desactivado, oscurecer activado"
+
+#: ../src/lib-display-blanking-status-menu-widget.c:204
+msgid "Display blanking inhibition disabled"
+msgstr "Inhibición de apagado de pantalla desactivado"
+
+#: ../src/lib-display-blanking-status-menu-widget.c:314
+msgid "Inhibit display blanking for..."
+msgstr "Inhibit apagado de pantalla por..."
+
+#: ../src/lib-display-blanking-status-menu-widget.c:318
+msgid "Hours"
+msgstr "Horas"
+
+#: ../src/lib-display-blanking-status-menu-widget.c:321
+msgid "Minutes"
+msgstr "Minutos"
+
+#: ../src/lib-display-blanking-status-menu-widget.c:434
+msgid "Select display blanking mode"
+msgstr "Seleccionar modo de apagado de pantalla"
