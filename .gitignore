@@ -1,0 +1,5 @@
+*-stamp
+debian/
+po/*.gmo
+src/lib-displayblanking-status-menu.so
+src/lib-display-blanking-status-menu-widget.o
