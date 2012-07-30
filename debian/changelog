@@ -1,3 +1,13 @@
+status-area-displayblanking-applet (0.9) unstable; urgency=low
+
+  * Show a status icon when display blanking is inhibited.
+  * Improve package description and add icon for the Application Manager.
+  * Add a extended description for display blanking modes.
+  * Update translation files.
+  * Code cleanup.
+
+ -- Leandro Lucarella <luca@llucax.com.ar>  Tue, 30 Jul 2012 17:22:31 +0200
+
 status-area-displayblanking-applet (0.5) unstable; urgency=low
 
   * Add timed display blanking inhibition button (the user can input a timeout
