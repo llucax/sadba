@@ -15,6 +15,7 @@ Description: Hildon Status Menu plugin to control display blanking
  the display blanking inhibition.
 XSBC-Maemo-Display-Name: Status Area Display Blanking Applet
 XSBC-Bugtracker: http://talk.maemo.org/showthread.php?t=85514
+XB-Maemo-Upgrade-Description:
 XB-Maemo-Icon-26:
  iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAABmJLR0QA/wD/
  AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH3AcbDRMSBp7Z
