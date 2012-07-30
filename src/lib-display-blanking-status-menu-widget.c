@@ -87,7 +87,7 @@ GType display_blanking_status_plugin_get_type (void);
 // Undocumented blanking modes as reported by David Weinehall from Nokia:
 // http://www.gossamer-threads.com/lists/maemo/developers/61201#61201
 #define BLANKING_MODES 5
-static const char *_DisplayBlankingDescription[BLANKING_MODES] =
+static const char *mode_title[BLANKING_MODES] =
 {
     gettext_noop ("Both enabled"),
     gettext_noop ("Both only on battery"),
@@ -408,7 +408,7 @@ on_mode_dialog_button_clicked (GtkWidget *button, GtkDialog *dialog)
     g_assert (mode != NULL);
 
     for (*mode = 0; *mode < BLANKING_MODES; (*mode)++) {
-        if (strcmp (title, _DisplayBlankingDescription[*mode]) == 0)
+        if (strcmp (title, mode_title[*mode]) == 0)
             break;
     }
     g_assert (*mode < BLANKING_MODES);
@@ -444,8 +444,7 @@ mode_get_input (DisplayBlankingStatusPluginPrivate *priv)
         GtkWidget *button =
                 hildon_button_new_with_text (HILDON_SIZE_FINGER_HEIGHT,
                     HILDON_BUTTON_ARRANGEMENT_VERTICAL,
-                    dgettext (GETTEXT_DOM, (_DisplayBlankingDescription[i])),
-                    NULL);
+                    dgettext (GETTEXT_DOM, (mode_title[i])), NULL);
         hildon_button_set_style (HILDON_BUTTON (button),
             HILDON_BUTTON_STYLE_PICKER);
         GtkWidget *icon = gtk_image_new_from_icon_name (mode_icon_name[i],
