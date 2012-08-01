@@ -7,7 +7,7 @@ Homepage: http://www.llucax.com.ar/proj/sadba/
 
 Package: status-area-displayblanking-applet
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, hildon-desktop (>= 1:2.2.142-11)
+Depends: ${shlibs:Depends}, ${misc:Depends}, hildon-desktop (>= 1:2.2)
 Description: Hildon Status Menu plugin to control display blanking
  This status menu applet let you easily change the display blanking mode right
  from the status menu, without having to go through the settings. It also let
