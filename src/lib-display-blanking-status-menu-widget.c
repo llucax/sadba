@@ -178,12 +178,18 @@ disable_inhibition (DisplayBlankingStatusPluginPrivate *priv)
             HD_STATUS_PLUGIN_ITEM (priv->plugin), NULL);
 }
 
-static gboolean
-on_inhibit_timeout (DisplayBlankingStatusPluginPrivate *priv)
+static void
+inhibit_display_blanking (DisplayBlankingStatusPluginPrivate *priv)
 {
     dbus_bool_t ok = dbus_connection_send (priv->dbus_conn, priv->dbus_msg,
             NULL);
     g_assert (ok == TRUE);
+}
+
+static gboolean
+on_inhibit_timeout (DisplayBlankingStatusPluginPrivate *priv)
+{
+    inhibit_display_blanking (priv);
 
     return TRUE;
 }
@@ -210,6 +216,8 @@ on_timed_inhibit_timeout (DisplayBlankingStatusPluginPrivate *priv)
 static void
 enable_inhibition (DisplayBlankingStatusPluginPrivate *priv)
 {
+    inhibit_display_blanking (priv);
+
     g_assert (priv->inhibit_timer_id == 0);
     priv->inhibit_timer_id = g_timeout_add_seconds (INHIBIT_MSG_INTERVAL,
             (GSourceFunc) on_inhibit_timeout, priv);
