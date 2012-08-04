@@ -79,6 +79,7 @@ GType display_blanking_status_plugin_get_type (void);
 #define HOURS_GCONF_KEY   "/apps/Maemo/sadba/timed_inhibit_hours"
 #define MINUTES_GCONF_KEY "/apps/Maemo/sadba/timed_inhibit_minutes"
 
+#define BANNER_DURATION 5000 // in milliseconds
 #define INHIBIT_MSG_INTERVAL 30 // in seconds
 
 #define GETTEXT_DOM "status-area-displayblanking-applet"
@@ -208,7 +209,7 @@ on_timed_inhibit_timeout (DisplayBlankingStatusPluginPrivate *priv)
     GtkWidget *banner = hildon_banner_show_information (
             priv->timed_inhibit_button, NULL,
             _ ("Display blanking inhibition disabled"));
-    hildon_banner_set_timeout (HILDON_BANNER (banner), 5000);
+    hildon_banner_set_timeout (HILDON_BANNER (banner), BANNER_DURATION);
 
     return FALSE;
 }
