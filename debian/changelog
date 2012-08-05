@@ -1,3 +1,51 @@
+status-area-displayblanking-applet (1.0) unstable; urgency=low
+
+  * Start display blanking inhibition immediately when activated instead of
+    doing so when the timer for display blanking fire. This makes the applet
+    behave properly for phones configured to blank in less than 30 seconds.
+  * Fix build and source dependencies.
+  * Add homepage to control file.
+  * Strip binaries.
+  * Optify package to use less rootfs space.
+
+ -- Leandro Lucarella <luca@llucax.com.ar>  Sun,  5 Aug 2012 14:32:38 +0200
+
+status-area-displayblanking-applet (0.9-6) unstable; urgency=low
+
+  * Fix rules to produce i386 package.
+
+ -- Leandro Lucarella <luca@llucax.com.ar>  Sun,  5 Aug 2012 01:52:21 +0200
+
+status-area-displayblanking-applet (0.9-5) unstable; urgency=low
+
+  * Fix bug.
+
+ -- Leandro Lucarella <luca@llucax.com.ar>  Sun,  5 Aug 2012 01:32:43 +0200
+
+status-area-displayblanking-applet (0.9-4) unstable; urgency=low
+
+  * Optify.
+
+ -- Leandro Lucarella <luca@llucax.com.ar>  Thu,  2 Aug 2012 21:49:15 +0200
+
+status-area-displayblanking-applet (0.9-3) unstable; urgency=low
+
+  * Add homepage.
+
+ -- Leandro Lucarella <luca@llucax.com.ar>  Thu,  2 Aug 2012 20:22:24 +0200
+
+status-area-displayblanking-applet (0.9-2) unstable; urgency=low
+
+  * Try to fix i386 build.
+
+ -- Leandro Lucarella <luca@llucax.com.ar>  Wed,  1 Aug 2012 11:22:24 +0200
+
+status-area-displayblanking-applet (0.9-1) unstable; urgency=low
+
+  * Fix build dependencies.
+
+ -- Leandro Lucarella <luca@llucax.com.ar>  Wed,  1 Aug 2012 01:22:24 +0200
+
 status-area-displayblanking-applet (0.9) unstable; urgency=low
 
   * Show a status icon when display blanking is inhibited.
