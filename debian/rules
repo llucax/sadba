@@ -35,6 +35,7 @@ binary-arch: build install
 	dh_install
 	#dh_installdocs
 	#dh_installchangelogs
+	dh_strip
 	#dh_compress
 	dh_fixperms
 	dh_shlibdeps
