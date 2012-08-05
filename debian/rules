@@ -27,8 +27,9 @@ install-stamp: build-stamp
 
 	touch install-stamp
 
-# Build architecture-independent files here.
 binary-indep: build install
+
+binary-arch: build install
 	dh_testdir
 	dh_testroot
 	dh_install
@@ -43,7 +44,5 @@ binary-indep: build install
 	dh_md5sums
 	dh_builddeb
 
-binary-arch:
-
-binary: binary-indep
+binary: binary-indep binary-arch
 .PHONY: build clean binary-arch binary-indep binary install
