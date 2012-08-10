@@ -1,3 +1,10 @@
+status-area-displayblanking-applet (1.1) unstable; urgency=low
+
+  * Move translation file from es_AR to es (we can start differentiating among
+    different flavours of Spanish once we have more than one translation).
+
+ -- Leandro Lucarella <luca@llucax.com.ar>  Fri, 10 Aug 2012 21:15:42 +0200
+
 status-area-displayblanking-applet (1.0-1) unstable; urgency=low
 
   * Re-upload to fix a "size mismatch" error when installing.
